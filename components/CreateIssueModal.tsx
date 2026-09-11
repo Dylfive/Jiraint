@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, User } from 'lucide-react';
 import {
   Issue, Sprint, Project, IssueType, IssuePriority, IssueStatus,
   PRIORITY_CONFIG, TYPE_CONFIG, COLUMNS,
@@ -14,11 +14,8 @@ interface CreateIssueModalProps {
   currentProject: Project | null;
   currentSprint: Sprint | null;
   sprints: Sprint[];
+  existingAssignees?: string[];
 }
-
-const ASSIGNEES = [
-  'Alex Chen', 'Sarah Kim', 'Marcus Lee', 'Jordan Patel', 'Riley Wong',
-];
 
 export default function CreateIssueModal({
   onClose,
@@ -27,6 +24,7 @@ export default function CreateIssueModal({
   currentProject,
   currentSprint,
   sprints,
+  existingAssignees = [],
 }: CreateIssueModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -48,7 +46,7 @@ export default function CreateIssueModal({
       type,
       priority,
       status,
-      assignee: assignee || null,
+      assignee: assignee.trim() || null,
       story_points: storyPoints ? parseInt(storyPoints) : null,
       sprint_id: sprintId || null,
     });
@@ -57,12 +55,12 @@ export default function CreateIssueModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-700/60 rounded-2xl shadow-2xl animate-scale-in overflow-hidden">
+      <div className="w-full max-w-lg bg-slate-900 border border-slate-700/60 rounded-2xl shadow-2xl animate-scale-in overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-indigo-500/20 rounded-lg flex items-center justify-center">
               <Plus className="w-4 h-4 text-indigo-400" />
@@ -77,15 +75,15 @@ export default function CreateIssueModal({
           <button
             id="close-create-modal-btn"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-all"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
             {/* Title */}
             <div>
               <label htmlFor="new-issue-title" className="block text-xs font-medium text-slate-400 mb-1.5">
@@ -120,23 +118,26 @@ export default function CreateIssueModal({
                   ))}
                 </select>
               </div>
+
               <div>
                 <label htmlFor="new-issue-priority" className="block text-xs font-medium text-slate-400 mb-1.5">Priority</label>
                 <select
                   id="new-issue-priority"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as IssuePriority)}
-                  className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 text-slate-200 text-sm rounded-lg px-3 py-2.5 outline-none transition-all cursor-pointer"
+                  className={`w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 text-sm rounded-lg px-3 py-2.5 outline-none transition-all cursor-pointer ${PRIORITY_CONFIG[priority].text}`}
                 >
                   {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
-                    <option key={key} value={key} className="bg-slate-900">{cfg.label}</option>
+                    <option key={key} value={key} className="bg-slate-900 text-slate-200">
+                      {cfg.label}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
 
             {/* Status + Assignee row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="new-issue-status" className="block text-xs font-medium text-slate-400 mb-1.5">Status</label>
                 <select
@@ -150,24 +151,32 @@ export default function CreateIssueModal({
                   ))}
                 </select>
               </div>
+
               <div>
-                <label htmlFor="new-issue-assignee" className="block text-xs font-medium text-slate-400 mb-1.5">Assignee</label>
-                <select
-                  id="new-issue-assignee"
-                  value={assignee}
-                  onChange={(e) => setAssignee(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 text-slate-200 text-sm rounded-lg px-3 py-2.5 outline-none transition-all cursor-pointer"
-                >
-                  <option value="" className="bg-slate-900">Unassigned</option>
-                  {ASSIGNEES.map((name) => (
-                    <option key={name} value={name} className="bg-slate-900">{name}</option>
-                  ))}
-                </select>
+                <label htmlFor="new-issue-assignee" className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Assignee <span className="text-slate-600">(optional)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="new-issue-assignee"
+                    type="text"
+                    list="create-assignee-suggestions"
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                    placeholder="e.g. Dylan or leave blank"
+                    className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 text-slate-200 text-sm rounded-lg px-3 py-2.5 outline-none transition-all placeholder-slate-600"
+                  />
+                  <datalist id="create-assignee-suggestions">
+                    {existingAssignees.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
             </div>
 
             {/* Sprint + Story Points row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="new-issue-sprint" className="block text-xs font-medium text-slate-400 mb-1.5">Sprint</label>
                 <select
@@ -176,14 +185,15 @@ export default function CreateIssueModal({
                   onChange={(e) => setSprintId(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 text-slate-200 text-sm rounded-lg px-3 py-2.5 outline-none transition-all cursor-pointer"
                 >
-                  <option value="" className="bg-slate-900">No Sprint</option>
+                  <option value="" className="bg-slate-900">No Sprint (Direct to Backlog/Board)</option>
                   {sprints.map((sprint) => (
                     <option key={sprint.id} value={sprint.id} className="bg-slate-900">
-                      {sprint.name}
+                      {sprint.name} {sprint.status === 'active' ? '(Active)' : ''}
                     </option>
                   ))}
                 </select>
               </div>
+
               <div>
                 <label htmlFor="new-issue-points" className="block text-xs font-medium text-slate-400 mb-1.5">Story Points</label>
                 <input
@@ -208,35 +218,30 @@ export default function CreateIssueModal({
                 id="new-issue-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add more context..."
-                rows={4}
+                placeholder="Add more details or notes..."
+                rows={3}
                 className="w-full bg-slate-800/80 border border-slate-700 focus:border-indigo-500/60 text-slate-300 text-sm rounded-lg px-3.5 py-2.5 outline-none resize-none transition-all placeholder-slate-600 leading-relaxed"
               />
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/60">
-            <p className="text-xs text-slate-600">
-              Press <kbd className="px-1 py-0.5 bg-slate-800 rounded text-[10px] font-mono">Enter</kbd> to submit
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                id="submit-create-issue-btn"
-                type="submit"
-                disabled={!title.trim() || submitting}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all shadow-lg shadow-indigo-600/20"
-              >
-                {submitting ? 'Creating...' : 'Create Issue'}
-              </button>
-            </div>
+          <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-800 bg-slate-900/90 flex-shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              id="submit-create-issue-btn"
+              type="submit"
+              disabled={!title.trim() || submitting}
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all shadow-lg shadow-indigo-600/20"
+            >
+              {submitting ? 'Creating...' : 'Create Issue'}
+            </button>
           </div>
         </form>
       </div>

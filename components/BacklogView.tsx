@@ -46,18 +46,18 @@ function BacklogIssueRow({
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/60 rounded-xl cursor-pointer transition-all group border border-transparent hover:border-slate-700/40"
+      className="flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-slate-800/60 rounded-xl cursor-pointer transition-all group border border-transparent hover:border-slate-700/40"
     >
       <span className="text-sm w-5 text-center flex-shrink-0">{type.emoji}</span>
 
-      <p className="flex-1 text-sm text-slate-200 truncate group-hover:text-white transition-colors">
+      <p className="flex-1 text-xs sm:text-sm text-slate-200 truncate group-hover:text-white transition-colors">
         {issue.title}
       </p>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         {/* Status pill */}
         <span
-          className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-700/60 text-slate-400"
+          className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700/50"
           style={{ borderLeft: `2px solid ${col?.color || '#64748b'}` }}
         >
           {col?.label}
@@ -65,7 +65,7 @@ function BacklogIssueRow({
 
         {/* Priority */}
         <span
-          className="hidden md:inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium"
+          className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium"
           style={{ color: priority.color, backgroundColor: priority.color + '20' }}
         >
           {priority.label}
@@ -73,19 +73,19 @@ function BacklogIssueRow({
 
         {/* Assignee */}
         {issue.assignee && (
-          <span className="hidden lg:inline text-[10px] text-slate-500 max-w-[80px] truncate">
-            {issue.assignee.split(' ')[0]}
+          <span className="hidden md:inline text-[10px] text-slate-400 max-w-[80px] truncate">
+            {issue.assignee}
           </span>
         )}
 
         {/* Points */}
         {issue.story_points && (
-          <span className="text-[10px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">
-            {issue.story_points}p
+          <span className="text-[10px] text-slate-500 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded font-mono">
+            {issue.story_points}pt
           </span>
         )}
 
-        <ChevronRight className="w-3.5 h-3.5 text-slate-700 group-hover:text-slate-500 transition-colors" />
+        <ChevronRight className="w-3.5 h-3.5 text-slate-700 group-hover:text-slate-400 transition-colors" />
       </div>
     </div>
   );
@@ -123,96 +123,69 @@ export default function BacklogView({
 
   if (filteredIssues.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-        <div className="text-4xl mb-4">📋</div>
-        <h3 className="text-slate-300 font-semibold text-lg mb-2">Backlog is empty</h3>
-        <p className="text-slate-500 text-sm mb-6 max-w-xs">
+      <div className="flex flex-col items-center justify-center h-full py-20 px-4 text-center">
+        <div className="text-3xl mb-3">📋</div>
+        <h3 className="text-slate-300 font-semibold text-base mb-1.5">No tasks in backlog</h3>
+        <p className="text-slate-500 text-xs sm:text-sm mb-5 max-w-xs">
           {filters.search || filters.priority || filters.type
-            ? 'No issues match your current filters.'
-            : 'Create your first issue to get started.'}
+            ? 'No tasks match your current filter criteria.'
+            : 'Create your first task to start organizing.'}
         </p>
         <button
           onClick={() => onCreateIssue()}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-all"
+          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium transition-all shadow-md shadow-indigo-600/20"
         >
           <Plus className="w-4 h-4" />
-          Create Issue
+          Create Task
         </button>
       </div>
     );
   }
 
   return (
-    <div className="p-5 space-y-6 animate-fade-in">
+    <div className="p-3 sm:p-5 space-y-4 sm:space-y-6 animate-fade-in max-w-6xl mx-auto">
       {/* Table Header */}
-      <div className="flex items-center gap-3 px-4 py-2 text-[10px] font-semibold text-slate-600 uppercase tracking-widest border-b border-slate-800">
+      <div className="flex items-center gap-3 px-3 sm:px-4 py-2 text-[10px] font-semibold text-slate-600 uppercase tracking-widest border-b border-slate-800">
         <span className="w-5" />
-        <span className="flex-1">Issue</span>
+        <span className="flex-1">Task</span>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="hidden sm:inline w-20 text-right">Status</span>
-          <span className="hidden md:inline w-16 text-right">Priority</span>
-          <span className="hidden lg:inline w-20 text-right">Assignee</span>
+          <span className="w-16 sm:w-20 text-right">Status</span>
+          <span className="hidden sm:inline w-16 text-right">Priority</span>
+          <span className="hidden md:inline w-20 text-right">Assignee</span>
           <span className="w-8 text-right">Pts</span>
           <span className="w-4" />
         </div>
       </div>
 
       {grouped.map(({ sprint, issues: groupIssues }) => (
-        <div key={sprint?.id || '__none__'}>
-          {/* Sprint Header */}
-          <div className="flex items-center justify-between mb-2">
+        <div key={sprint ? sprint.id : 'no-sprint'} className="space-y-1.5">
+          {/* Group Header */}
+          <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-slate-900/60 rounded-xl border border-slate-800/60">
             <div className="flex items-center gap-2">
-              {sprint ? (
-                <>
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      sprint.status === 'active'
-                        ? 'bg-emerald-400'
-                        : sprint.status === 'planning'
-                        ? 'bg-indigo-400'
-                        : 'bg-slate-600'
-                    }`}
-                  />
-                  <h3 className="text-sm font-semibold text-slate-300">{sprint.name}</h3>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                      sprint.status === 'active'
-                        ? 'bg-emerald-500/15 text-emerald-400'
-                        : sprint.status === 'planning'
-                        ? 'bg-indigo-500/15 text-indigo-400'
-                        : 'bg-slate-700 text-slate-500'
-                    }`}
-                  >
-                    {sprint.status}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <div className="w-2 h-2 rounded-full bg-slate-700" />
-                  <h3 className="text-sm font-semibold text-slate-500">No Sprint</h3>
-                </>
-              )}
-              <span className="text-xs text-slate-600">({groupIssues.length})</span>
+              <span className="text-xs font-semibold text-slate-200">
+                {sprint ? sprint.name : 'Backlog / Unassigned Sprints'}
+              </span>
+              <span className="text-[10px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded-full font-mono">
+                {groupIssues.length}
+              </span>
             </div>
-
             <button
-              onClick={() => onCreateIssue('todo')}
-              className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-indigo-400 transition-colors px-2 py-1 hover:bg-slate-800 rounded-lg"
+              onClick={() => onCreateIssue()}
+              className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium px-2 py-1 rounded hover:bg-slate-800 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add
+              <span>Add</span>
             </button>
           </div>
 
-          {/* Issues */}
-          <div className="bg-slate-900/50 border border-slate-800/60 rounded-xl overflow-hidden">
-            {groupIssues.map((issue, idx) => (
-              <div
+          {/* Group Issues */}
+          <div className="divide-y divide-slate-800/40 bg-slate-900/30 rounded-xl border border-slate-800/40 overflow-hidden">
+            {groupIssues.map((issue) => (
+              <BacklogIssueRow
                 key={issue.id}
-                className={idx < groupIssues.length - 1 ? 'border-b border-slate-800/40' : ''}
-              >
-                <BacklogIssueRow issue={issue} onClick={() => onIssueClick(issue)} />
-              </div>
+                issue={issue}
+                onClick={() => onIssueClick(issue)}
+              />
             ))}
           </div>
         </div>

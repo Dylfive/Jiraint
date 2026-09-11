@@ -1,12 +1,13 @@
 'use client';
 
 import { DraggableProvidedDragHandleProps, DraggableProvidedDraggableProps } from '@hello-pangea/dnd';
-import { Issue, PRIORITY_CONFIG, TYPE_CONFIG } from '@/lib/types';
-import { AlertCircle } from 'lucide-react';
+import { Issue, IssueStatus, PRIORITY_CONFIG, TYPE_CONFIG, COLUMNS } from '@/lib/types';
+import { AlertCircle, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 
 interface IssueCardProps {
   issue: Issue;
   onClick: () => void;
+  onQuickMove?: (newStatus: IssueStatus) => void;
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
   draggableProps?: DraggableProvidedDraggableProps;
   innerRef?: (el: HTMLElement | null) => void;
@@ -36,9 +37,12 @@ function getAvatarColor(name: string | null): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
+const STATUS_ORDER: IssueStatus[] = ['todo', 'in_progress', 'review', 'done'];
+
 export default function IssueCard({
   issue,
   onClick,
+  onQuickMove,
   dragHandleProps,
   draggableProps,
   innerRef,
@@ -47,6 +51,10 @@ export default function IssueCard({
   const priority = PRIORITY_CONFIG[issue.priority];
   const type = TYPE_CONFIG[issue.type];
 
+  const currentIndex = STATUS_ORDER.indexOf(issue.status);
+  const prevStatus = currentIndex > 0 ? STATUS_ORDER[currentIndex - 1] : null;
+  const nextStatus = currentIndex < STATUS_ORDER.length - 1 ? STATUS_ORDER[currentIndex + 1] : null;
+
   return (
     <div
       ref={innerRef}
@@ -54,7 +62,7 @@ export default function IssueCard({
       onClick={onClick}
       className={`
         group relative bg-slate-800/90 border rounded-xl p-3.5 cursor-pointer
-        transition-all duration-200 select-none
+        transition-all duration-200 select-none touch-manipulation
         ${isDragging
           ? 'kanban-card-dragging border-indigo-500/60 bg-slate-800'
           : 'border-slate-700/60 hover:border-slate-600 hover:bg-slate-800 hover:shadow-lg hover:shadow-black/20'
@@ -63,73 +71,89 @@ export default function IssueCard({
     >
       {/* Priority left-border accent */}
       <div
-        className="absolute left-0 top-3 bottom-3 w-0.5 rounded-r-full"
+        className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full"
         style={{ backgroundColor: priority.color }}
       />
 
-      {/* Drag handle */}
-      <div
-        {...dragHandleProps}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 hover:bg-slate-700 rounded"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <svg className="w-3 h-3 text-slate-500" viewBox="0 0 10 16" fill="currentColor">
-          <circle cx="2" cy="2" r="1.5" />
-          <circle cx="8" cy="2" r="1.5" />
-          <circle cx="2" cy="8" r="1.5" />
-          <circle cx="8" cy="8" r="1.5" />
-          <circle cx="2" cy="14" r="1.5" />
-          <circle cx="8" cy="14" r="1.5" />
-        </svg>
-      </div>
+      {/* Top row: Type, Priority, and Drag Handle */}
+      <div className="flex items-center justify-between mb-2 pl-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${type.bg} ${type.text}`}>
+            <span>{type.emoji}</span>
+            {type.label}
+          </span>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${priority.bg} ${priority.text}`}>
+            {issue.priority === 'critical' && <AlertCircle className="w-2.5 h-2.5 mr-0.5" />}
+            {priority.label}
+          </span>
+        </div>
 
-      {/* Type + Priority badges */}
-      <div className="flex items-center gap-1.5 mb-2.5 pl-2">
-        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${type.bg} ${type.text}`}>
-          <span>{type.emoji}</span>
-          {type.label}
-        </span>
-        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${priority.bg} ${priority.text}`}>
-          {issue.priority === 'critical' && <AlertCircle className="w-2.5 h-2.5 mr-0.5" />}
-          {priority.label}
-        </span>
+        {/* Drag handle */}
+        <div
+          {...dragHandleProps}
+          className="text-slate-500 hover:text-slate-300 p-1 -mr-1 rounded cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+          title="Drag issue"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </div>
       </div>
 
       {/* Title */}
-      <p className="text-sm text-slate-200 font-medium leading-snug pl-2 pr-6 mb-3 line-clamp-2">
+      <p className="text-sm text-slate-200 font-medium leading-snug pl-2 mb-3 line-clamp-2">
         {issue.title}
       </p>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between pl-2">
+      {/* Footer: Quick Move (Mobile Friendly) + Assignee + Points */}
+      <div className="flex items-center justify-between pl-2 pt-1 border-t border-slate-700/40">
         <div className="flex items-center gap-2">
-          {/* Assignee avatar */}
-          {issue.assignee ? (
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-              style={{ backgroundColor: getAvatarColor(issue.assignee) }}
-              title={issue.assignee}
-            >
-              {getInitials(issue.assignee)}
-            </div>
-          ) : (
-            <div className="w-5 h-5 rounded-full border border-dashed border-slate-600 flex items-center justify-center" title="Unassigned">
-              <span className="text-[8px] text-slate-600">?</span>
+          {/* Quick mobile move arrows */}
+          {onQuickMove && (
+            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+              {prevStatus && (
+                <button
+                  onClick={() => onQuickMove(prevStatus)}
+                  className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+                  title={`Move back to ${COLUMNS.find((c) => c.id === prevStatus)?.label}`}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {nextStatus && (
+                <button
+                  onClick={() => onQuickMove(nextStatus)}
+                  className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+                  title={`Move to ${COLUMNS.find((c) => c.id === nextStatus)?.label}`}
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           )}
 
-          {/* Story points */}
           {issue.story_points && (
-            <span className="text-[10px] text-slate-500 bg-slate-700/50 px-1.5 py-0.5 rounded">
-              {issue.story_points} pts
+            <span className="text-[10px] text-slate-500 bg-slate-900/60 border border-slate-700/50 px-1.5 py-0.5 rounded font-mono">
+              {issue.story_points}pt
             </span>
           )}
         </div>
 
-        {/* Issue key */}
-        <span className="text-[10px] text-slate-600 font-mono">
-          #{issue.id.slice(-4).toUpperCase()}
-        </span>
+        {/* Assignee Avatar / Name */}
+        {issue.assignee ? (
+          <div className="flex items-center gap-1.5" title={`Assigned to ${issue.assignee}`}>
+            <span className="text-[10px] text-slate-400 max-w-[90px] truncate hidden sm:inline">
+              {issue.assignee}
+            </span>
+            <div
+              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+              style={{ backgroundColor: getAvatarColor(issue.assignee) }}
+            >
+              {getInitials(issue.assignee)}
+            </div>
+          </div>
+        ) : (
+          <span className="text-[10px] text-slate-600 italic">Unassigned</span>
+        )}
       </div>
     </div>
   );

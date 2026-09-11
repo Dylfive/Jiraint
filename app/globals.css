@@ -98,6 +98,25 @@
   border: 1px solid rgba(51, 65, 85, 0.6);
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (max-width: 640px) {
+  .snap-x-mandatory {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .snap-col {
+    scroll-snap-align: center;
+  }
+}
+
 .shimmer {
   background: linear-gradient(
     90deg,

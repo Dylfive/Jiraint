@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   X, Trash2, Save, AlertCircle, Clock, User,
-  Tag, Flag, Layers, ChevronDown,
+  Tag, Flag, Layers,
 } from 'lucide-react';
 import {
   Issue, Sprint, IssueType, IssuePriority, IssueStatus,
@@ -13,28 +13,32 @@ import {
 interface IssueModalProps {
   issue: Issue;
   sprints: Sprint[];
+  existingAssignees?: string[];
   onClose: () => void;
   onSave: (id: string, updates: Partial<Issue>) => void;
   onDelete: (id: string) => void;
 }
 
-const ASSIGNEES = [
-  'Alex Chen', 'Sarah Kim', 'Marcus Lee', 'Jordan Patel', 'Riley Wong',
-];
-
 function Field({ label, icon: Icon, children }: { label: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="flex items-center gap-2 w-32 flex-shrink-0 mt-2">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 py-1">
+      <div className="flex items-center gap-2 sm:w-28 flex-shrink-0">
         <Icon className="w-3.5 h-3.5 text-slate-500" />
-        <span className="text-xs text-slate-500">{label}</span>
+        <span className="text-xs text-slate-400 font-medium">{label}</span>
       </div>
-      <div className="flex-1">{children}</div>
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
   );
 }
 
-export default function IssueModal({ issue, sprints, onClose, onSave, onDelete }: IssueModalProps) {
+export default function IssueModal({
+  issue,
+  sprints,
+  existingAssignees = [],
+  onClose,
+  onSave,
+  onDelete,
+}: IssueModalProps) {
   const [title, setTitle] = useState(issue.title);
   const [description, setDescription] = useState(issue.description || '');
   const [type, setType] = useState<IssueType>(issue.type);
@@ -50,21 +54,16 @@ export default function IssueModal({ issue, sprints, onClose, onSave, onDelete }
 
   const handleSave = () => {
     onSave(issue.id, {
-      title,
-      description: description || null,
+      title: title.trim(),
+      description: description.trim() || null,
       type,
       priority,
       status,
-      assignee: assignee || null,
+      assignee: assignee.trim() || null,
       story_points: storyPoints ? parseInt(storyPoints) : null,
       sprint_id: sprintId || null,
     });
     setIsDirty(false);
-    onClose();
-  };
-
-  const handleDelete = () => {
-    onDelete(issue.id);
   };
 
   const priorityCfg = PRIORITY_CONFIG[priority];
@@ -72,30 +71,28 @@ export default function IssueModal({ issue, sprints, onClose, onSave, onDelete }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-end bg-black/60 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-xl h-full bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col animate-slide-in-right overflow-hidden">
+      <div className="w-full max-w-xl bg-slate-900 border border-slate-700/60 rounded-2xl shadow-2xl animate-scale-in flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <span className={`text-sm ${typeCfg.text}`}>{typeCfg.emoji}</span>
-            <span className="text-xs text-slate-500 font-mono">
-              #{issue.id.slice(-6).toUpperCase()}
+            <span className="text-base">{typeCfg.emoji}</span>
+            <span className="text-xs font-mono text-slate-500">
+              #{issue.id.slice(0, 8)}
             </span>
-            <span className="text-slate-700">•</span>
-            <span className="text-xs text-slate-500">
-              {new Date(issue.created_at).toLocaleDateString('en-US', {
-                month: 'short', day: 'numeric', year: 'numeric',
-              })}
+            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${priorityCfg.bg} ${priorityCfg.text}`}>
+              {priorityCfg.label}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-1.5">
             {isDirty && (
               <button
                 id="save-issue-btn"
                 onClick={handleSave}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-all shadow-md shadow-indigo-600/20"
               >
                 <Save className="w-3.5 h-3.5" />
                 Save
@@ -104,7 +101,7 @@ export default function IssueModal({ issue, sprints, onClose, onSave, onDelete }
             <button
               id="delete-issue-btn"
               onClick={() => setShowDeleteConfirm(true)}
-              className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
               title="Delete issue"
             >
               <Trash2 className="w-4 h-4" />
@@ -112,7 +109,7 @@ export default function IssueModal({ issue, sprints, onClose, onSave, onDelete }
             <button
               id="close-issue-modal-btn"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-slate-800 transition-all"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-all"
             >
               <X className="w-4 h-4" />
             </button>
@@ -120,19 +117,24 @@ export default function IssueModal({ issue, sprints, onClose, onSave, onDelete }
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* Title */}
-          <textarea
-            id="issue-title-input"
-            value={title}
-            onChange={(e) => { setTitle(e.target.value); markDirty(); }}
-            className="w-full bg-transparent text-lg font-semibold text-slate-100 resize-none outline-none placeholder-slate-600 mb-4 leading-snug hover:bg-slate-800/30 focus:bg-slate-800/50 rounded-lg px-2 py-1.5 -mx-2 transition-all"
-            placeholder="Issue title..."
-            rows={2}
-          />
+          <div>
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">
+              Title
+            </label>
+            <textarea
+              id="issue-title-input"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); markDirty(); }}
+              className="w-full bg-slate-800/40 hover:bg-slate-800/70 focus:bg-slate-800 border border-slate-700/60 focus:border-indigo-500 rounded-lg px-3 py-2 text-base font-semibold text-slate-100 resize-none outline-none placeholder-slate-600 transition-all leading-snug"
+              placeholder="Issue title..."
+              rows={2}
+            />
+          </div>
 
-          {/* Metadata grid */}
-          <div className="space-y-2 mb-6 p-4 bg-slate-800/30 rounded-xl border border-slate-800">
+          {/* Metadata fields */}
+          <div className="space-y-2 p-3.5 bg-slate-800/40 rounded-xl border border-slate-800">
             <Field label="Status" icon={Layers}>
               <select
                 id="issue-status-select"
@@ -179,17 +181,22 @@ export default function IssueModal({ issue, sprints, onClose, onSave, onDelete }
             </Field>
 
             <Field label="Assignee" icon={User}>
-              <select
-                id="issue-assignee-select"
-                value={assignee}
-                onChange={(e) => { setAssignee(e.target.value); markDirty(); }}
-                className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-2.5 py-1.5 outline-none focus:border-indigo-500 transition-all cursor-pointer"
-              >
-                <option value="" className="bg-slate-900">Unassigned</option>
-                {ASSIGNEES.map((name) => (
-                  <option key={name} value={name} className="bg-slate-900">{name}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  id="issue-assignee-input"
+                  type="text"
+                  list="edit-assignee-suggestions"
+                  value={assignee}
+                  onChange={(e) => { setAssignee(e.target.value); markDirty(); }}
+                  placeholder="e.g. Dylan or leave unassigned"
+                  className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-2.5 py-1.5 outline-none focus:border-indigo-500 transition-all placeholder-slate-600"
+                />
+                <datalist id="edit-assignee-suggestions">
+                  {existingAssignees.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+              </div>
             </Field>
 
             <Field label="Sprint" icon={Clock}>
@@ -216,86 +223,81 @@ export default function IssueModal({ issue, sprints, onClose, onSave, onDelete }
                 max="100"
                 value={storyPoints}
                 onChange={(e) => { setStoryPoints(e.target.value); markDirty(); }}
-                placeholder="Story points"
-                className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-2.5 py-1.5 outline-none focus:border-indigo-500 transition-all"
+                placeholder="Story points (optional)"
+                className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-2.5 py-1.5 outline-none focus:border-indigo-500 transition-all placeholder-slate-600"
               />
             </Field>
           </div>
 
           {/* Description */}
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2 block">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">
               Description
             </label>
             <textarea
               id="issue-description-input"
               value={description}
               onChange={(e) => { setDescription(e.target.value); markDirty(); }}
-              placeholder="Add a description..."
-              rows={6}
-              className="w-full bg-slate-800/50 hover:bg-slate-800 focus:bg-slate-800 border border-slate-700/60 focus:border-indigo-500/60 text-slate-300 text-sm rounded-xl px-4 py-3 outline-none resize-none transition-all placeholder-slate-600 leading-relaxed"
+              placeholder="Add more details, tasks, or notes..."
+              rows={4}
+              className="w-full bg-slate-800/40 hover:bg-slate-800/70 focus:bg-slate-800 border border-slate-700/60 focus:border-indigo-500/60 text-slate-300 text-sm rounded-xl px-3.5 py-2.5 outline-none resize-none transition-all placeholder-slate-600 leading-relaxed"
             />
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 flex-shrink-0 bg-slate-900/80">
-          <p className="text-xs text-slate-600">
-            Updated {new Date(issue.updated_at).toLocaleDateString('en-US', {
-              month: 'short', day: 'numeric',
-            })}
-          </p>
+        {/* Footer with save */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-800 bg-slate-900/90 flex-shrink-0">
+          <span className="text-xs text-slate-500">
+            {isDirty ? 'Unsaved changes' : 'All changes saved'}
+          </span>
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all"
+              className="px-3.5 py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all"
             >
-              Cancel
+              Close
             </button>
-            <button
-              id="save-issue-footer-btn"
-              onClick={handleSave}
-              disabled={!isDirty}
-              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all"
-            >
-              Save Changes
-            </button>
+            {isDirty && (
+              <button
+                onClick={handleSave}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-all shadow-md shadow-indigo-600/20"
+              >
+                Save Changes
+              </button>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Delete Confirmation */}
-      {showDeleteConfirm && (
-        <div
-          className="absolute inset-0 bg-black/70 flex items-center justify-center z-10 animate-fade-in"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteConfirm(false); }}
-        >
-          <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 max-w-sm w-full mx-4 animate-scale-in shadow-2xl">
-            <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 className="w-5 h-5 text-red-400" />
-            </div>
-            <h3 className="text-white font-semibold text-center mb-2">Delete Issue?</h3>
-            <p className="text-slate-400 text-sm text-center mb-6">
-              This action cannot be undone. The issue will be permanently removed.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2 text-sm text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                id="confirm-delete-btn"
-                onClick={handleDelete}
-                className="flex-1 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded-lg transition-all font-medium"
-              >
-                Delete
-              </button>
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xs flex items-center justify-center p-6 z-20 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-100 mb-1">Delete this issue?</h3>
+              <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+                This action cannot be undone. Are you sure you want to remove &ldquo;{issue.title}&rdquo;?
+              </p>
+              <div className="flex gap-2 justify-center">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  id="confirm-delete-issue-btn"
+                  onClick={() => onDelete(issue.id)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-medium transition-all shadow-lg shadow-red-600/20"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
